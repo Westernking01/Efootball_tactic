@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Diagnostic Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        button {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 10px 5px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #2563eb;
+        }
+        .result {
+            background: #2a2a2a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #3b82f6;
+        }
+        .error {
+            border-left-color: #ef4444;
+        }
+        .success {
+            border-left-color: #10b981;
+        }
+        pre {
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔧 EF Tactics AI - API Diagnostic Test</h1>
+    <p>This page tests the backend API directly from the browser.</p>
+    
+    <div>
+        <button onclick="testHealth()">Test Health Endpoint</button>
+        <button onclick="testPresets()">Test Presets API</button>
+        <button onclick="testGenerate()">Test Generate API</button>
+        <button onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        
+        function addResult(title, data, isError = false) {
+            const div = document.createElement('div');
+            div.className = `result ${isError ? 'error' : 'success'}`;
+            div.innerHTML = `
+                <h3>${isError ? '❌' : '✅'} ${title}</h3>
+                <pre>${JSON.stringify(data, null, 2)}</pre>
+            `;
+            document.getElementById('results').appendChild(div);
+        }
+
+        async function testHealth() {
+            try {
+                const response = await fetch('http://localhost:5000/health');
+                const data = await response.json();
+                addResult('Health Check', data);
+            } catch (error) {
+                addResult('Health Check Failed', {
+                    error: error.message,
+                    stack: error.stack
+                }, true);
+            }
+        }
+
+        async function testPresets() {
+            try {
+                const response = await fetch(`${API_BASE}/tactics/presets`);
+                const data = await response.json();
+                addResult(`Presets API (${data.length} presets found)`, {
+                    count: data.length,
+                    sample: data[0]
+                });
+            } catch (error) {
+                addResult('Presets API Failed', {
+                    error: error.message,
+                    stack: error.stack
+                }, true);
+            }
+        }
+
+        async function testGenerate() {
+            try {
+                const response = await fetch(`${API_BASE}/tactics/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        formation: '4-3-3',
+                        playstyle: 'Possession Game',
+                        squadLevel: 'Medium',
+                        opponentStyle: 'Possession'
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                addResult('Generate Tactic API', {
+                    formation: data.formation,
+                    manager: data.manager?.name,
+                    hasInstructions: !!data.instructions,
+                    instructionsCount: data.instructions?.length
+                });
+            } catch (error) {
+                addResult('Generate API Failed', {
+                    error: error.message,
+                    stack: error.stack
+                }, true);
+            }
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // Auto-run tests on load
+        window.onload = () => {
+            console.log('🔍 Running automatic API diagnostics...');
+            setTimeout(testHealth, 500);
+            setTimeout(testPresets, 1000);
+            setTimeout(testGenerate, 1500);
+        };
+    </script>
+</body>
+</html>
